@@ -1,6 +1,7 @@
 #data
 data/task2_3
 *.mp4
+*.pth
 
 # Environments
 .env

@@ -53,11 +53,11 @@ def prepare_data(data_dir):
     files = walk_files + stand_files
     labels = [1]*len(walk_files) + [0]*len(stand_files)
     
-    # Split into train/test (since we have few samples, use 75-25 split)
+    # Split into train/test (since we have few samples, use 50-50 split)
     train_files, test_files, train_labels, test_labels = train_test_split(
         files, labels, test_size=0.5, random_state=42, stratify=labels
     )
-    
+    print(train_files,test_files)
     # Create datasets
     train_dataset = SkeletonSequenceDataset(train_files, train_labels)
     test_dataset = SkeletonSequenceDataset(test_files, test_labels)

@@ -4,63 +4,78 @@ Created on Thu Jul 17 12:04:57 2025
 
 @author: admin
 """
+import torch
 from training.train_encoder import train_encoder
 from data.SimCLR_pretrain import ContrastiveFrameEncoder
 from data.feature_extact import VideoFeatureExtractor
 from training.train_lstm import train_lstm
-import torch
+from training.train_transformer import train_transformer
+from training.inference import ActionRecognizer
 from pathlib import Path 
+import os
+data_dir = Path(r"F:\Piao\human-action-recognition\data\task1\raw\train")
+encorder_path = Path(r"F:\Piao\human-action-recognition\src\task2\checkpoints\pretrained_encoder_checkpoint.pth")
+lstm_path = Path(r"F:\Piao\human-action-recognition\src\task2\checkpoints\lstm_classifier_checkpoint.pth")
+transformer_path = Path(r"F:\Piao\human-action-recognition\src\task2\checkpoints\transformer_classifier_checkpoint.pth")
+
 # 1. First pretrain the encoder
-data_dir = Path(r"F:\Piao\veesion\data\task1\raw\train")
+# 
 # train_encoder(
 #     video_dir=data_dir,
-#     epochs=50
+#     epochs=200
 # )
 
-# # 2. Then extract features using the trained encoder
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# encoder =  ContrastiveFrameEncoder().to(device)
-# encoder.load_state_dict(torch.load("pretrained_encoder.pth"))
-# encoder.eval()
+# 2. extract features from encoder
+# feature_extractor = VideoFeatureExtractor(encorder_path)
+# for filename in os.listdir(data_dir):
+#         file_path = os.path.join(data_dir, filename)
+#         if os.path.isfile(file_path):
+#             name, ext = os.path.splitext(filename)
+#             if ext.lower() in [".mp4"]:
+#                 features = feature_extractor.extract_features(
+#                     os.path.join(data_dir,filename),
+#                     os.path.join(Path(r"F:\Piao\human-action-recognition\data\task1"),
+#                                  "extracted_features",
+#                                  name+'.npy'
+#                 ))
 
-encorder_path = Path(r"F:\Piao\veesion\src\task2\output\pretrained_encoder.pth")
-feature_extractor = VideoFeatureExtractor(encorder_path)
-for filename in os.listdir(data_dir):
-        file_path = os.path.join(root_path,'raw', filename)
-        if os.path.isfile(file_path):
-            _, ext = os.path.splitext(filename)
-            if ext.lower() in video_extensions:
-                keypoints_sequence = extract_skeletons_from_video(file_path, os.path.join(root_path,'output_keypoints'))
-      
-feature_extractor.extract_features(
-    data_dir,
-    "extracted_features"
-)
 
 # 3. Finally train the LSTM classifier
-labels = [0, 1, 0, 1]  # Your labels (0=stand, 1=walk)
 train_lstm(
-    features_dir="extracted_features",
-    labels=labels,
-    epochs=30
+    features_dir=os.path.join(Path(r"F:\Piao\human-action-recognition\data\task1"),
+                 "extracted_features"),
+    labels=None,
+    epochs=200
 )
-#%%
-# 1. Pretrain encoder (from Task 2)
-train_encoder(video_dir="your_videos/")
 
-# 2. Train transformer
-train_transformer(
-    features_dir="extracted_features/",
-    labels=[0,1,0,1],  # Dummy labels
-    encoder_path="pretrained_encoder.pth"
+# # 4.  LSTM classifier inference
+recognizer = ActionRecognizer(
+    encoder_path=encorder_path,
+    model_type='lstm',
+    classifier_path=lstm_path,
+    class_names=[0, 1]
 )
+result = recognizer.predict(os.path.join(Path(r"F:\Piao\human-action-recognition\data\task1\raw\dev"),
+                   "test3.mp4"))
+print(f"Predicted action: {result}")
+#%%
+
+#2. Train transformer
+# train_transformer(
+#     features_dir=os.path.join(Path(r"F:\Piao\human-action-recognition\data\task1"),
+#                       "extracted_features"),
+#          labels=None,
+#          epochs=500
+# )
 
 # 3. Run inference
-recognizer = TransformerActionRecognizer(
-    encoder_path="pretrained_encoder.pth",
-    transformer_path="video_transformer.pth",
-    class_names=["stand", "walk"]
+recognizer = ActionRecognizer(
+    encoder_path=encorder_path,
+    model_type='transformer',
+    classifier_path=transformer_path,
+    class_names=[0, 1]
 )
 
-result = recognizer.predict("test_video.mp4")
+result = recognizer.predict(os.path.join(Path(r"F:\Piao\human-action-recognition\data\task1\raw\dev"),
+                  "test2.mp4"))
 print(f"Predicted action: {result}")

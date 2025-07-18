@@ -28,7 +28,7 @@ class VideoTransformer(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(feature_dim, dim_feedforward),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.5),
             nn.Linear(dim_feedforward, num_classes)
             )
     
@@ -48,8 +48,8 @@ class VideoTransformer(nn.Module):
         
         # Use [CLS] token or average pooling
         pooled = transformer_out.mean(dim=1)  # Average over time
-        
-        return self.classifier(pooled)
+        output = torch.sigmoid(self.classifier(pooled)).squeeze(1)
+        return output
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=500):

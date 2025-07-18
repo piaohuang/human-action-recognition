@@ -8,12 +8,14 @@ import torch
 import cv2
 from data.SimCLR_pretrain import ContrastiveFrameEncoder
 from torchvision.transforms import transforms
+import numpy as np
 class VideoFeatureExtractor:
     def __init__(self, encoder_path):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.device = device
         self.encoder = ContrastiveFrameEncoder().to(device)
-        self.encoder.load_state_dict(torch.load(encoder_path))
+        self.checkpoints = torch.load(encoder_path)
+        self.encoder.load_state_dict(self.checkpoints['model_state_dict'])
         self.encoder.eval()
         
         self.transform = transforms.Compose([
@@ -57,6 +59,6 @@ class VideoFeatureExtractor:
         cap.release()
         
         if save_path:
-            np.save(save_path, features_tensor.numpy())
-            print(f"Features saved to {save_path}")
+            np.save(save_path, (torch.stack(features)).numpy())
+            print(f"Features saved to {save_path}", (torch.stack(features)).shape)
         return torch.stack(features)  # (seq_len, feature_dim)

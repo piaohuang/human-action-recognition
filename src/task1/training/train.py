@@ -55,7 +55,12 @@ def train_model(model, train_loader, test_loader, num_epochs=50, patience=5):
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0
-            torch.save(model.state_dict(), 'best_model.pth')
+            torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': loss,
+        }, 'gru_classifier_checkpoint.pth')
         else:
             patience_counter += 1
             if patience_counter >= patience:

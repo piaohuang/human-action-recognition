@@ -11,11 +11,12 @@ from data.SimCLR_pretrain import ContrastiveFrameEncoder, ContrastiveLoss
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 def train_encoder(video_dir, epochs=50):
     """Self-supervised encoder pretraining"""
     # 1. Prepare dataset of video frames with augmentations
     dataset = ContrastiveVideoDataset(video_dir)
-    loader = DataLoader(dataset, batch_size=16, shuffle=True)
+    loader = DataLoader(dataset, batch_size=32, shuffle=True)
     
     # 2. Initialize model and optimizer
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -25,6 +26,7 @@ def train_encoder(video_dir, epochs=50):
     
     # 3. Training loop
     for epoch in range(epochs):
+        start_time = time.time()
         model.train()
         total_loss = 0
         pos_sims = []
@@ -61,21 +63,30 @@ def train_encoder(video_dir, epochs=50):
               f"Pos: {avg_pos:.3f} | "
               f"Neg: {avg_neg:.3f} | "
               f"Ratio: {avg_pos/(avg_neg+1e-8):.1f}x")
+        end_time = time.time()
+        print(f"Execution time: {(end_time - start_time):.2f} seconds")
     # Save pretrained encoder
-    torch.save(model.state_dict(), "pretrained_encoder.pth")
+    torch.save({
+    'epoch': epoch,
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'loss': loss,
+}, 'pretrained_encoder_checkpoint.pth')
     
-def evaluate(model, val_loader):
-    """Evaluate model on validation set"""
+def evaluate_model(model, loader, device, criterion):
     model.eval()
+    total_loss = 0.0
     correct = 0
     total = 0
     
     with torch.no_grad():
-        for features, labels in val_loader:
-            features, labels = features.cuda(), labels.cuda()
-            outputs = model(features)
-            _, predicted = torch.max(outputs.data, 1)
+        for sequences, labels in loader:
+            sequences, labels = sequences.to(device), labels.float().to(device)
+            outputs = model(sequences)
+            loss = criterion(outputs, labels)
+            
+            total_loss += loss.item()
+            predicted = (outputs > 0.5).float()
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-    
-    return 100 * correct / total
+    return total_loss / len(loader), 100 * correct / total

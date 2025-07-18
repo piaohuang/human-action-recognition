@@ -6,19 +6,28 @@ Created on Thu Jul 17 11:14:45 2025
 """
 import torch
 import torch.nn as nn
-import torchvision.models as models
+from torchvision.models import resnet18, ResNet18_Weights
 import torch.nn.functional as F
 class ContrastiveFrameEncoder(nn.Module):
-    def __init__(self, feature_dim=128):
+    def __init__(self, feature_dim=128, pretrained=True):
         super().__init__()
         # Use ResNet as backbone
-        self.encoder = models.resnet18(pretrained=False)
+        weights = ResNet18_Weights.DEFAULT if pretrained else None
+        self.encoder = resnet18(weights=weights)
         self.encoder.fc = nn.Identity()  # Remove final classification layer
+        # Freeze all layers
+        if pretrained is not None:
+            for param in self.encoder.parameters():
+                param.requires_grad = False
         
+            # Unfreeze only last residual block
+            for param in self.encoder.layer4.parameters():
+                param.requires_grad = True
         # Projection head for contrastive learning
         self.projection = nn.Sequential(
             nn.Linear(512, 512),
             nn.ReLU(),
+            nn.Dropout(0.4),
             nn.Linear(512, feature_dim)
             )
         
@@ -37,21 +46,22 @@ class ContrastiveLoss(nn.Module):
         batch_size = z_i.size(0)
         
         # Concatenate all features
-        z_i = F.normalize(z_i, p=2, dim=1)  # L2-normalization
-        z_j = F.normalize(z_j, p=2, dim=1)
+        z_i = F.normalize(z_i, dim=1)  
+        z_j = F.normalize(z_j, dim=1)
         z = torch.cat([z_i, z_j], dim=0)
        # Compute similarity matrix
+        sim_raw = torch.mm(z, z.t())
         sim = torch.mm(z, z.t()) / self.temperature
         
         # Paires positives (diagonales décalées)
         pos_pairs = torch.cat([
-            torch.diag(sim[:batch_size, batch_size:]),
-            torch.diag(sim[batch_size:, :batch_size])
+            torch.diag(sim_raw[:batch_size, batch_size:]),
+            torch.diag(sim_raw[batch_size:, :batch_size])
         ])
         
         # Paires négatives (masquer les paires positives)
         neg_mask = ~torch.eye(2*batch_size, dtype=torch.bool, device=z.device)
-        neg_pairs = sim[neg_mask].view(2*batch_size, -1)
+        neg_pairs = sim_raw[neg_mask].view(2*batch_size, -1)
         
         # Calcul des métriques
         avg_pos_sim = pos_pairs.mean().item()

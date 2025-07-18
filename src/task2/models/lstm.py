@@ -6,12 +6,12 @@ Created on Thu Jul 17 11:20:11 2025
 """
 import torch.nn as nn
 class VideoClassifier(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_classes=2):
+    def __init__(self, input_dim, hidden_dim, num_classes=1):
         super().__init__()
         self.lstm = nn.LSTM(
             input_size=input_dim,
             hidden_size=hidden_dim,
-            num_layers=2,
+            num_layers=1,
             bidirectional=True,
             batch_first=True)
         
@@ -19,7 +19,9 @@ class VideoClassifier(nn.Module):
             nn.Linear(hidden_dim*2, hidden_dim),  # *2 for bidirectional
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(hidden_dim, num_classes))
+            nn.Linear(hidden_dim, 1),
+            nn.Sigmoid())
+        
     
     def forward(self, x):
         # x shape: (batch_size, seq_len, input_dim)
@@ -27,5 +29,6 @@ class VideoClassifier(nn.Module):
         
         # Take last timestep's output
         last_out = lstm_out[:, -1, :]
-        
-        return self.classifier(last_out)
+        output = self.classifier(last_out).squeeze(1)
+    
+        return output

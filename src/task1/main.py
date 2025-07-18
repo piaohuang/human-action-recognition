@@ -12,7 +12,7 @@ from pathlib import Path
 import os
 import numpy as np
 if __name__ == "__main__":
-    data_dir = Path(r"F:\Piao\veesion\data\output_keypoints")
+    data_dir = Path(r"F:\Piao\human-action-recognition\data\task1\output_keypoints")
     train_loader, test_loader = prepare_data(data_dir)
     
     print(f"Train samples: {len(train_loader.dataset)}")
@@ -26,8 +26,7 @@ if __name__ == "__main__":
     )
     
     # 3. Train (with very few epochs due to small dataset)
-    train_model(model, train_loader, test_loader, num_epochs=30, patience=3)
+    train_model(model, train_loader, test_loader, num_epochs=300, patience=3)
     
     # 4. Load best model for inference
-    model.load_state_dict(torch.load('best_model.pth'))
     print(predict(model,  np.load(os.path.join(data_dir, 'test1_skeletons.npy'))))

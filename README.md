@@ -102,7 +102,7 @@ run pipeline
 #### Design Decisions
 For dataset
 - use a custom videos for simplification
-- use UF-101 dataset for pretrain encoder 
+- use UCF101 dataset for pretrain encoder 
 
 For Training:
 

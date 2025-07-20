@@ -1,14 +1,5 @@
 #data
-data/task2_3
+data/UCF101
 *.mp4
-*.pth
 
-# Environments
-.env
-.envrc
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+

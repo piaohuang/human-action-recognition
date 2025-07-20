@@ -9,24 +9,27 @@ import torch
 from tqdm import tqdm
 from data.dataset_feature import FeatureDataset, create_dataloaders
 from models.lstm import VideoClassifier
-def train_classifier(model_type, model, train_loader, val_loader, epochs=50, patience=10):
+import os
+def train_classifier(model_type, model, train_loader, val_loader, epochs=50, patience=10, save_path = ""):
     """Train LSTM classifier on extracted features"""
-    # 1. Prepare dataset
-    # dataset = FeatureDataset(features_dir, labels)
-    # train_loader, val_loader = create_dataloaders(dataset)
-    
-    # 2. Initialize model
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # model = VideoClassifier(
-    #     input_dim=128,  # Match encoder feature_dim
-    #     hidden_dim=256,
-    #     num_classes=len(set(dataset.labels))).to(device)
+ 
     model = model.to(device)
-    criterion = nn.BCELoss()  # Binary cross-entropy
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    criterion = nn.BCEWithLogitsLoss()
+    if(model_type == 'transformer'): 
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    else:
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    
+    
     best_val_loss = float('inf')
     patience_counter = 0
     
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            print(f"[Frozen] {name}")
+  
     # 3. Training loop
     for epoch in range(epochs):
         model.train()
@@ -41,6 +44,18 @@ def train_classifier(model_type, model, train_loader, val_loader, epochs=50, pat
          
             loss = criterion(outputs, labels)
             loss.backward()
+            
+            # Gradient check
+            total_grad = 0
+            for name, param in model.named_parameters():
+                if param.grad is not None:
+                    grad_mean = param.grad.abs().mean()
+                    total_grad += grad_mean
+                    if grad_mean < 1e-8:
+                        print(f"Vanishing gradient in {name}")
+                  
+            print(f"Loss={loss.item():.4f}, Avg Grad={total_grad/len(list(model.parameters())):.6f}")
+    
             optimizer.step()
             
             train_loss += loss.item()
@@ -60,7 +75,7 @@ def train_classifier(model_type, model, train_loader, val_loader, epochs=50, pat
             best_val_loss = val_loss
             patience_counter = 0
             torch.save(model.state_dict(),
-            model_type + '_classifier.pth')
+            os.path.join(save_path, model_type + '_classifier.pth'))
         else:
             patience_counter += 1
             if patience_counter >= patience:

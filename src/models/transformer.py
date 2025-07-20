@@ -9,8 +9,8 @@ import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import math
 class VideoTransformer(nn.Module):
-    def __init__(self, feature_dim=128, num_classes=2, 
-                 nhead=8, num_layers=3, dim_feedforward=512):
+    def __init__(self, feature_dim=128, num_classes=1, 
+                 nhead=4, num_layers=2, dim_feedforward=256):
         super().__init__()
         
         # Positional encoding for temporal dimension
@@ -28,7 +28,7 @@ class VideoTransformer(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(feature_dim, dim_feedforward),
             nn.ReLU(),
-            nn.Dropout(0.5),
+            nn.Dropout(0.3),
             nn.Linear(dim_feedforward, num_classes)
             )
     
@@ -48,7 +48,7 @@ class VideoTransformer(nn.Module):
         
         # Use [CLS] token or average pooling
         pooled = transformer_out.mean(dim=1)  # Average over time
-        output = torch.sigmoid(self.classifier(pooled)).squeeze(1)
+        output = self.classifier(pooled).squeeze(1)
         return output
 
 class PositionalEncoding(nn.Module):

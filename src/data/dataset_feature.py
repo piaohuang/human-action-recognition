@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import torch.nn.functional as F
 class FeatureDataset(Dataset):
-    def __init__(self, method, npy_files, labels, seq_length=300):
+    def __init__(self, method, npy_files, labels, seq_length=30):
         self.npy_files = npy_files
         self.labels = labels
         self.seq_length = seq_length
@@ -37,15 +37,11 @@ class FeatureDataset(Dataset):
         if(self.method == 'skeleton'):
             # Normalize coordinates to [-1, 1] range
             feature = (feature - 0.5) * 2
-        elif(self.method == 'pretrain'):
-            feature = F.normalize(feature, p=2, dim=1)
-        else:
-            raise ValueError(f"Wrong method : {self.method}")
         
         return feature, label
 
 
-def create_dataloaders(method, data_dir, batch_size=2, test_size=0.5, random_state=1):
+def create_dataloaders(method, data_dir, batch_size=1, test_size=0.5, random_state=123):
     """Prepare train/test loaders for walk/stand classification"""
     # Assuming naming convention: walk_*.npy and stand_*.npy
     walk_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) 
@@ -55,13 +51,13 @@ def create_dataloaders(method, data_dir, batch_size=2, test_size=0.5, random_sta
     
     # Create labels (0 for stand, 1 for walk)
     files = walk_files + stand_files
-    labels = [1]*len(walk_files) + [0]*len(stand_files)
+    labels = [1.]*len(walk_files) + [0.]*len(stand_files)
     
     # Split into train/test (since we have few samples, use 50-50 split)
     train_files, test_files, train_labels, test_labels = train_test_split(
         files, labels, test_size=test_size, random_state=42, stratify=labels
     )
-    print(train_files,test_files)
+    print(train_files,test_files, train_labels, test_labels)
     # Create datasets
     train_dataset = FeatureDataset(method, train_files, train_labels)
     test_dataset = FeatureDataset(method, test_files, test_labels)

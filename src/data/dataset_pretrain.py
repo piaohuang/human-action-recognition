@@ -63,7 +63,6 @@ def get_all_filename(video_dir, files_per_subdir=5):
         for f in files_:
             if f.lower().endswith(('.avi', '.mp4')):
                 video_files.append(os.path.join(root, f))
-    print(len(video_files))
     return video_files
 
 

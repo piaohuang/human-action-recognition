@@ -21,19 +21,18 @@ class SkeletonActionClassifier(nn.Module):
             hidden_size=hidden_size,
             num_layers=num_layers,
             batch_first=True,
-            bidirectional=True  # Using bidirectional for better temporal modeling
+            bidirectional=False  
         )
         self.fc = nn.Sequential(
-            nn.Linear(hidden_size*2, 32),  # *2 for bidirectional
+            nn.LayerNorm(hidden_size),
+            nn.Linear(hidden_size, 32),  
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(32, 1),
-            nn.Sigmoid()
         )
         
     def forward(self, x):
         # x shape: (batch_size, seq_length, input_size)
-        print('shape of x', x.dim())
         if x.dim() == 2:
             x = x.unsqueeze(0)
         gru_out, _ = self.gru(x)  # output shape: (batch_size, seq_length, hidden_size*2)

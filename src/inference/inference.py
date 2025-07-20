@@ -60,7 +60,7 @@ class ActionRecognizer:
         self.classifier.to(self.device)
 
     
-    def predict(self, video_path, seq_length=140):
+    def predict(self, video_path, seq_length=30):
         if(self.pretrain==False):
             # Initialize MediaPipe Pose
             mp_pose = mp.solutions.pose
@@ -69,9 +69,9 @@ class ActionRecognizer:
         features = []
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
-            raise ValueError(f"Impossible d'ouvrir la vidéo : {video_path}")
+            raise ValueError(f"can not open video: {video_path}")
         else:
-            print('predic for file:', video_path)
+            print('predict for file:', video_path)
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -99,22 +99,24 @@ class ActionRecognizer:
         if(self.pretrain):
             # Stack features (seq_len, feature_dim) and add batch dim
             features = torch.stack(features)
-            features = features.reshape(1,features.shape[0], features.shape[1] * features.shape[2]).to(self.device)
-            features = F.normalize(features, p=2, dim=1)
+           # features = features.reshape(1,features.shape[0], features.shape[1] * features.shape[2]).to(self.device)
+            features = features.reshape(features.shape[0], features.shape[1] * features.shape[2]).to(self.device)
+
         else:
             features = torch.FloatTensor(features)
             features = features.reshape(features.shape[0], -1)
             features = (features - 0.5) * 2
             
-        # # Pad/truncate to match training length
-        # if len(features) > 30:
-        #     features = features[:30]
-        # else:
-        #     padding = np.zeros((30 - len(features), features.shape[1]))
-        #     features = np.vstack([features, padding])
-            
+        # Pad/truncate to match training length
+        if len(features) > seq_length:
+            features = features[:seq_length]
+        else:  
+            padding = np.zeros((seq_length - len(features), features.shape[1]))
+            features = np.vstack([features, padding])
+        
+        if(self.pretrain):
+            features = features.reshape(1,features.shape[0], features.shape[1]).to(self.device)
         features = features.to(self.device)
-        print("shape", features.shape)
         # Classify sequence
         with torch.no_grad():
             logits = self.classifier(features)

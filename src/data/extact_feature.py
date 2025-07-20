@@ -59,5 +59,5 @@ class VideoFeatureExtractor:
         
         if save_path:
             np.save(save_path, (torch.stack(features)).numpy())
-            print(f"Features saved to {save_path}", (torch.stack(features)).shape)
+            print(f"Features saved to {save_path}")
         return torch.stack(features)  # (seq_len, feature_dim)
